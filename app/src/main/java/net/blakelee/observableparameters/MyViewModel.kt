@@ -23,15 +23,7 @@ class MyViewModel : ViewModel() {
     val parametersToRemove: SnapshotStateList<SearchQueryParameter<Any?>> = mutableStateListOf()
 
     init {
-        snapshotFlow { regions.toList() } // Need to call toList otherwise add/remove won't be listened to
-            .mapLatest { performSearch() } // Cancels the previous search and starts the new one
-            .launchIn(viewModelScope)
-
-        snapshotFlow { searchQueryParameters.toMap() }
-            .mapLatest { performSearch() }
-            .launchIn(viewModelScope)
-
-        snapshotFlow { searchParameters }
+        snapshotFlow { Triple(regions.toList(), searchQueryParameters.toMap(), searchParameters) }
             .mapLatest { performSearch() }
             .launchIn(viewModelScope)
     }
