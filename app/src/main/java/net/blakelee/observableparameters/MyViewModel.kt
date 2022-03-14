@@ -11,7 +11,9 @@ import kotlinx.coroutines.flow.mapLatest
 
 class MyViewModel : ViewModel() {
 
-    var searchParameters: SearchParameters by mutableStateOf(BrokerageSearchParameters())
+    private val repository = MyRepository() // No DI, deal with it
+
+    var searchParameters: SearchParameters by repository::searchParameters
 
     var performSearch by mutableStateOf(false)
 
@@ -23,28 +25,20 @@ class MyViewModel : ViewModel() {
     val parametersToRemove: SnapshotStateList<SearchQueryParameter<Any?>> = mutableStateListOf()
 
     init {
-        snapshotFlow { Triple(regions.toList(), searchQueryParameters.toMap(), searchParameters) }
+        snapshotFlow { Triple(searchParameters, regions.toList(), searchQueryParameters.toMap()) }
             .mapLatest { performSearch() }
             .launchIn(viewModelScope)
     }
 
-    suspend fun performSearch() {
+    private suspend fun performSearch() {
         performSearch = true
         delay(1000) // This simulates us doing a search
         performSearch = false
     }
 
-    fun toggleSearchParameters() {
-        searchParameters = if (searchParameters is BrokerageSearchParameters)
-            RentalSearchParameters()
-        else {
-            BrokerageSearchParameters()
-        }
-    }
+    fun toggleSearchParameters() = repository.toggleSearchParameters()
 
-    fun addRegion() {
-        searchParameters.addRegion(Region(("Region ${regions.size + 1}")))
-    }
+    fun addRegion() = repository.addRegion()
 
     fun <T: Any?> add(searchQueryParameter: SearchQueryParameter<T>, value: T) {
         parametersToAdd[searchQueryParameter as SearchQueryParameter<Any?>] = value
@@ -57,7 +51,7 @@ class MyViewModel : ViewModel() {
     fun commit() {
         val add = this.parametersToAdd
         val remove = this.parametersToRemove
-        searchParameters.commit {
+        repository.commit {
             add.forEach { add(it.key, it.value) }
             remove.forEach { remove(it) }
         }
